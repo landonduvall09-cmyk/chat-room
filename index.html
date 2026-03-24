@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📚 Study Group Hub | Emoji Reactions</title>
+    <title>🔒 Study Group Hub | Password Protected</title>
     <style>
         * {
             margin: 0;
@@ -14,39 +14,130 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            height: 100vh;
-            overflow: hidden;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
         }
 
-        .login-container {
+        /* Password Gate */
+        .password-gate {
             background: white;
-            border-radius: 20px;
+            border-radius: 24px;
             padding: 40px;
             width: 400px;
             text-align: center;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            animation: fadeInUp 0.5s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .password-gate .lock-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .password-gate h2 {
+            color: #1e293b;
+            margin-bottom: 10px;
+        }
+
+        .password-gate p {
+            color: #64748b;
+            margin-bottom: 25px;
+            font-size: 0.9em;
+        }
+
+        .password-gate input {
+            width: 100%;
+            padding: 14px 18px;
+            margin: 10px 0;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .password-gate input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .password-gate button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.3s;
+        }
+
+        .password-gate button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(102, 126, 234, 0.4);
+        }
+
+        .error-message {
+            color: #ef4444;
+            font-size: 0.85em;
+            margin-top: 10px;
+            display: none;
+        }
+
+        /* Login Screen (after password) */
+        .login-container {
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            width: 400px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            animation: fadeInUp 0.5s ease;
+            display: none;
+        }
+
+        .login-container h1 {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 10px;
         }
 
         .login-container input {
             width: 100%;
-            padding: 15px;
+            padding: 14px;
             margin: 10px 0;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 16px;
         }
 
         .login-container button {
             width: 100%;
-            padding: 15px;
+            padding: 14px;
             background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
             border: none;
-            border-radius: 10px;
-            font-weight: bold;
+            border-radius: 12px;
+            font-weight: 600;
             cursor: pointer;
         }
 
@@ -54,6 +145,9 @@
             display: none;
             width: 100%;
             height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
         }
 
         .app-container {
@@ -199,7 +293,6 @@
             padding: 10px;
         }
 
-        /* Reactions */
         .reactions-container {
             display: flex;
             gap: 5px;
@@ -230,24 +323,14 @@
             border-color: #667eea;
         }
 
-        .reaction-emoji {
-            font-size: 1.1em;
-        }
-
-        .reaction-count {
-            color: #475569;
-            font-weight: 500;
-        }
-
-        /* Reaction Picker */
         .reaction-picker {
-            position: absolute;
+            position: fixed;
             background: white;
-            border-radius: 30px;
-            padding: 8px 12px;
+            border-radius: 40px;
+            padding: 10px 15px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.2);
             display: flex;
-            gap: 8px;
+            gap: 10px;
             z-index: 1000;
             opacity: 0;
             transform: scale(0.9);
@@ -265,9 +348,9 @@
             font-size: 1.5em;
             cursor: pointer;
             padding: 5px;
-            transition: transform 0.2s;
             background: none;
             border: none;
+            transition: transform 0.2s;
         }
 
         .reaction-option:hover {
@@ -335,6 +418,17 @@
     </style>
 </head>
 <body>
+    <!-- Password Gate -->
+    <div class="password-gate" id="passwordGate">
+        <div class="lock-icon">🔒</div>
+        <h2>Private Study Room</h2>
+        <p>This chat room is password protected</p>
+        <input type="password" id="passwordInput" placeholder="Enter password" onkeypress="if(event.key==='Enter') verifyPassword()">
+        <button onclick="verifyPassword()">Unlock →</button>
+        <div class="error-message" id="passwordError">Incorrect password. Try again.</div>
+    </div>
+
+    <!-- Login Screen (after password) -->
     <div class="login-container" id="loginContainer">
         <h1>📚 Study Group Hub</h1>
         <p style="margin-bottom: 20px;">😊 React to messages with emojis!</p>
@@ -342,6 +436,7 @@
         <button onclick="joinStudySession()">Join Study Session →</button>
     </div>
 
+    <!-- Main Study App -->
     <div class="study-app" id="studyApp">
         <div class="app-container">
             <div class="sidebar">
@@ -385,17 +480,38 @@
         let socket, currentUser, currentGroup = 'general-study', privateChatWith = null;
         let reactionsData = {};
         let currentReactionPicker = null;
-
-        // Available emojis (like Apple Messages)
+        let passwordVerified = false;
         const availableEmojis = ['👍', '❤️', '😂', '😮', '😢', '🎉', '🔥', '💯', '👏', '🙏', '😍', '🤔', '😎', '🥳', '😭', '💀', '✨', '⭐'];
 
+        function verifyPassword() {
+            const password = document.getElementById('passwordInput').value;
+            const errorDiv = document.getElementById('passwordError');
+            
+            if (password === 'monster') {
+                passwordVerified = true;
+                document.getElementById('passwordGate').style.display = 'none';
+                document.getElementById('loginContainer').style.display = 'block';
+                errorDiv.style.display = 'none';
+            } else {
+                errorDiv.style.display = 'block';
+                document.getElementById('passwordInput').value = '';
+                document.getElementById('passwordInput').focus();
+            }
+        }
+
         function joinStudySession() {
+            if (!passwordVerified) return;
+            
             const username = document.getElementById('usernameInput').value.trim();
             if (!username) return alert('Please enter your name');
+            
             currentUser = username;
             socket = io();
+            
+            // No need to verify password again since it's already done
             socket.emit('student-join', username);
             setupSocketListeners();
+            
             document.getElementById('loginContainer').style.display = 'none';
             document.getElementById('studyApp').style.display = 'block';
         }
@@ -731,7 +847,6 @@
 
             container.appendChild(div);
 
-            // Load existing reactions
             if (reactionsData[msg.id]) {
                 updateReactionsDisplay(div, msg.id);
             } else if (!msg.isSystem && !msg.isImage) {
@@ -756,6 +871,11 @@
             div.textContent = text;
             return div.innerHTML;
         }
+
+        // Allow Enter key on password input
+        document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') verifyPassword();
+        });
     </script>
 </body>
 </html>

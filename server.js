@@ -10,6 +10,9 @@ const io = socketIo(server);
 
 app.use(express.static(__dirname));
 
+// Password protection
+const CHAT_PASSWORD = 'monster'; // The gate password
+
 // Data storage files
 const STUDY_DATA_FILE = path.join(__dirname, 'study_data.json');
 const OFFLINE_MESSAGES_FILE = path.join(__dirname, 'offline_messages.json');
@@ -78,7 +81,6 @@ function loadData() {
             const data = JSON.parse(fs.readFileSync(STUDY_DATA_FILE, 'utf8'));
             if (data.studyGroups) {
                 Object.assign(studyGroups, data.studyGroups);
-                // Ensure reactions object exists
                 Object.keys(studyGroups).forEach(groupId => {
                     if (!studyGroups[groupId].reactions) studyGroups[groupId].reactions = {};
                 });
@@ -261,6 +263,15 @@ io.on('connection', (socket) => {
     console.log('Student connected:', socket.id);
     let currentUser = null;
 
+    // Password verification first
+    socket.on('verify-password', (password, callback) => {
+        if (password === CHAT_PASSWORD) {
+            callback({ success: true });
+        } else {
+            callback({ success: false, error: 'Incorrect password' });
+        }
+    });
+
     socket.on('student-join', (username) => {
         currentUser = username;
         activeUsers.set(socket.id, { username, currentRoom: 'general-study' });
@@ -365,7 +376,6 @@ io.on('connection', (socket) => {
         io.to(currentGroup).emit('message', message);
     });
     
-    // Add reaction to message
     socket.on('add-reaction', ({ messageId, emoji, isPrivate, targetUsername }) => {
         if (!currentUser) return;
         
@@ -391,14 +401,11 @@ io.on('connection', (socket) => {
         }
     });
     
-    // Remove reaction
     socket.on('remove-reaction', ({ messageId, emoji, isPrivate, targetUsername }) => {
         if (!currentUser) return;
         
         if (isPrivate && targetUsername) {
-            // For private messages, we'll handle removal
             const conversationId = getPrivateConversationId(currentUser, targetUsername);
-            // Simplified - in production you'd have removeReaction function
             const reactionUpdate = { messageId, emoji, username: currentUser, action: 'remove', isPrivate: true };
             const targetSocketId = userSocketMap.get(targetUsername);
             socket.emit('reaction-updated', reactionUpdate);
@@ -599,7 +606,8 @@ app.post('/clear-history', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`📚 Study Group Hub running on http://localhost:${PORT}`);
+    console.log(`🔒 Study Group Hub running on http://localhost:${PORT}`);
+    console.log(`🔑 Password protected: Required to enter`);
     console.log(`💬 Private Messages with Offline Support`);
     console.log(`🗑️ Anyone Can Delete Any Message`);
     console.log(`😊 Emoji Reactions Enabled (Like Apple Messages)`);
