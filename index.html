@@ -2,575 +2,474 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>💬 Friends Chat Room | With Image Upload & Profanity Filter</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💬 Advanced Chat Room | Groups & Private Chats</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .app { display: flex; height: 100vh; }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: #2c3e50;
+            color: white;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .sidebar-header {
+            padding: 20px;
+            background: #1a2632;
+            border-bottom: 1px solid #3e5a6b;
+        }
+        .sidebar-header h2 { font-size: 1.3em; margin-bottom: 5px; }
+        .sidebar-header p { font-size: 0.8em; opacity: 0.7; }
+        
+        /* Rooms Section */
+        .rooms-section, .users-section {
+            padding: 15px;
+            border-bottom: 1px solid #3e5a6b;
+        }
+        .section-title {
+            font-size: 0.9em;
+            text-transform: uppercase;
+            opacity: 0.7;
+            margin-bottom: 10px;
+        }
+        .room-item, .user-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #3e5a6b;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
             align-items: center;
+        }
+        .room-item:hover, .user-item:hover { background: #4e6b7e; transform: translateX(5px); }
+        .room-item.active { background: #667eea; }
+        .room-badge {
+            background: #1a2632;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 0.7em;
+        }
+        
+        /* Main Chat Area */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #f5f5f5;
+        }
+        .chat-header {
+            background: white;
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .chat-header h3 { color: #333; }
+        .chat-header .badge {
+            background: #667eea;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+        }
+        
+        /* Messages */
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
             padding: 20px;
         }
-
-        /* Login Screen */
+        .message {
+            margin-bottom: 15px;
+            animation: fadeIn 0.3s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message-header {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 5px;
+            align-items: baseline;
+            flex-wrap: wrap;
+        }
+        .message-username {
+            font-weight: bold;
+            color: #667eea;
+        }
+        .message-time {
+            font-size: 0.7em;
+            color: #999;
+        }
+        .message-text { color: #333; word-wrap: break-word; }
+        .message-image {
+            max-width: 300px;
+            max-height: 300px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+        .system-message {
+            text-align: center;
+            color: #999;
+            font-style: italic;
+            padding: 10px;
+        }
+        .filtered-badge {
+            background: #ff9800;
+            color: white;
+            font-size: 0.7em;
+            padding: 2px 6px;
+            border-radius: 10px;
+        }
+        .private-badge {
+            background: #4caf50;
+            color: white;
+            font-size: 0.7em;
+            padding: 2px 6px;
+            border-radius: 10px;
+        }
+        
+        /* Input Area */
+        .input-area {
+            background: white;
+            padding: 20px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .input-area input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            outline: none;
+        }
+        .input-area input[type="text"]:focus { border-color: #667eea; }
+        button {
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        button:hover { transform: scale(1.05); }
+        .upload-btn { background: #4caf50; }
+        
+        .typing-indicator {
+            padding: 5px 20px;
+            color: #999;
+            font-style: italic;
+            font-size: 0.8em;
+        }
+        
+        /* Login */
         .login-container {
             background: white;
             border-radius: 20px;
             padding: 40px;
-            width: 100%;
-            max-width: 400px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 400px;
             text-align: center;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
-
-        .login-container h1 {
-            color: #667eea;
-            margin-bottom: 10px;
-            font-size: 2em;
-        }
-
-        .login-container p {
-            color: #666;
-            margin-bottom: 30px;
-        }
-
         .login-container input {
             width: 100%;
             padding: 15px;
             margin: 10px 0;
             border: 2px solid #e0e0e0;
             border-radius: 10px;
-            font-size: 16px;
-            transition: border-color 0.3s;
         }
-
-        .login-container input:focus {
-            outline: none;
-            border-color: #667eea;
+        .chat-room { display: none; width: 100%; }
+        
+        .create-group {
+            margin-top: 10px;
+            display: flex;
+            gap: 5px;
         }
-
-        .login-container button {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+        .create-group input {
+            flex: 1;
+            padding: 8px;
+            border-radius: 5px;
             border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: transform 0.2s;
         }
-
-        .login-container button:hover {
-            transform: translateY(-2px);
+        .create-group button {
+            padding: 8px 15px;
+            font-size: 0.8em;
         }
-
-        /* Main Chat Room */
-        .chat-room {
-            display: none;
-            width: 100%;
-            max-width: 1200px;
-            height: 85vh;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            overflow: hidden;
-        }
-
-        .chat-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            text-align: center;
-        }
-
-        .chat-header h2 {
-            font-size: 1.5em;
-        }
-
-        .chat-header p {
-            font-size: 0.9em;
-            opacity: 0.9;
-        }
-
-        .chat-header .badge {
-            background: rgba(255,255,255,0.2);
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            margin-top: 8px;
-            display: inline-block;
-        }
-
-        .chat-main {
-            display: flex;
-            height: calc(100% - 80px);
-        }
-
-        /* Sidebar */
-        .sidebar {
-            width: 250px;
-            background: #f8f9fa;
-            border-right: 1px solid #e0e0e0;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .sidebar-header {
-            padding: 20px;
-            background: #fff;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .sidebar-header h3 {
-            color: #333;
-            font-size: 1.1em;
-        }
-
-        .users-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 15px;
-        }
-
-        .user-item {
-            padding: 8px 12px;
-            margin: 5px 0;
-            background: white;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            color: #333;
-        }
-
-        .user-item::before {
-            content: "●";
-            color: #4caf50;
-            font-size: 12px;
-        }
-
-        /* Chat Area */
-        .chat-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .messages-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-            background: #fafafa;
-        }
-
-        .message {
-            margin-bottom: 15px;
-            animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .message-header {
-            display: flex;
-            align-items: baseline;
-            gap: 10px;
-            margin-bottom: 5px;
-        }
-
-        .message-username {
-            font-weight: bold;
-            color: #667eea;
-        }
-
-        .message-time {
-            font-size: 0.75em;
-            color: #999;
-        }
-
-        .message-text {
-            color: #333;
-            word-wrap: break-word;
-            line-height: 1.4;
-        }
-
-        .filtered-badge {
-            background: #ff9800;
-            color: white;
-            font-size: 10px;
-            padding: 2px 6px;
-            border-radius: 10px;
-            margin-left: 8px;
-        }
-
-        .message-image {
-            max-width: 300px;
-            max-height: 300px;
-            border-radius: 10px;
-            margin-top: 5px;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        .message-image:hover {
-            transform: scale(1.05);
-        }
-
-        .system-message {
-            text-align: center;
-            color: #999;
-            font-style: italic;
-            font-size: 0.9em;
-            margin: 10px 0;
-        }
-
-        .typing-indicator {
-            padding: 10px 20px;
-            color: #999;
-            font-style: italic;
-            font-size: 0.85em;
-            border-top: 1px solid #e0e0e0;
-        }
-
-        .message-input-area {
-            display: flex;
-            padding: 20px;
-            background: white;
-            border-top: 1px solid #e0e0e0;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .message-input-area input[type="text"] {
-            flex: 1;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 25px;
-            font-size: 14px;
-            outline: none;
-            transition: border-color 0.3s;
-            min-width: 150px;
-        }
-
-        .message-input-area input[type="text"]:focus {
-            border-color: #667eea;
-        }
-
-        .file-input-wrapper {
-            position: relative;
-            overflow: hidden;
-            display: inline-block;
-        }
-
-        .upload-btn {
-            padding: 12px 20px;
-            background: #4caf50;
-            color: white;
-            border: none;
-            border-radius: 25px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: transform 0.2s;
-        }
-
-        .upload-btn:hover {
-            transform: scale(1.05);
-            background: #45a049;
-        }
-
-        .send-btn {
-            padding: 12px 30px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 25px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: transform 0.2s;
-        }
-
-        .send-btn:hover {
-            transform: scale(1.05);
-        }
-
-        .clear-history-btn {
-            background: rgba(255,255,255,0.2);
-            border: 1px solid rgba(255,255,255,0.3);
-            color: white;
-            padding: 5px 12px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 12px;
-            margin-top: 5px;
-            transition: all 0.2s;
-        }
-
-        .clear-history-btn:hover {
-            background: rgba(255,255,255,0.3);
-        }
-
+        
         @media (max-width: 768px) {
-            .sidebar {
-                width: 200px;
-            }
-            
-            .message-image {
-                max-width: 200px;
-                max-height: 200px;
-            }
-            
-            .upload-btn, .send-btn {
-                padding: 10px 15px;
-                font-size: 12px;
-            }
+            .sidebar { width: 250px; }
+            .message-image { max-width: 200px; }
         }
     </style>
 </head>
 <body>
-    <!-- Login Screen -->
     <div class="login-container" id="loginContainer">
-        <h1>💬 Friends Chat</h1>
-        <p>Connect with your friends in real-time</p>
-        <input type="text" id="usernameInput" placeholder="Enter your username" maxlength="20">
-        <button onclick="joinChat()">Join Chat Room →</button>
+        <h1>💬 Advanced Chat</h1>
+        <p>Groups | Private Messages | Images</p>
+        <input type="text" id="usernameInput" placeholder="Enter username" maxlength="20">
+        <button onclick="joinChat()">Join Chat →</button>
     </div>
-
-    <!-- Main Chat Room -->
+    
     <div class="chat-room" id="chatRoom">
-        <div class="chat-header">
-            <h2>✨ Friends Chat Room ✨</h2>
-            <p>Connect with friends across devices in real-time</p>
-            <div class="badge">🔞 Profanity Filter Active | 🖼️ Image Upload Enabled</div>
-            <button class="clear-history-btn" onclick="clearChatHistory()">🗑️ Clear Chat History</button>
-        </div>
-        <div class="chat-main">
+        <div class="app">
             <div class="sidebar">
                 <div class="sidebar-header">
-                    <h3>👥 Online Users</h3>
+                    <h2>💬 Chat Rooms</h2>
+                    <p>Click a room to join</p>
                 </div>
-                <div class="users-list" id="usersList">
-                    <div class="user-item">Loading...</div>
+                <div class="rooms-section">
+                    <div class="section-title">📌 PUBLIC ROOMS</div>
+                    <div id="roomsList"></div>
+                    <div class="create-group">
+                        <input type="text" id="newGroupName" placeholder="New group name">
+                        <button onclick="createGroup()">+ Create</button>
+                    </div>
+                </div>
+                <div class="users-section">
+                    <div class="section-title">👥 ONLINE USERS</div>
+                    <div id="onlineUsersList"></div>
                 </div>
             </div>
+            
             <div class="chat-area">
-                <div class="messages-container" id="messagesContainer">
-                    <div class="system-message">✨ Loading chat history... ✨</div>
+                <div class="chat-header">
+                    <h3 id="currentRoomName">General Chat</h3>
+                    <div class="badge" id="roomTypeBadge">Public</div>
                 </div>
+                <div class="messages-container" id="messagesContainer"></div>
                 <div class="typing-indicator" id="typingIndicator"></div>
-                <div class="message-input-area">
-                    <input type="text" id="messageInput" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
-                    <div class="file-input-wrapper">
-                        <button class="upload-btn" onclick="document.getElementById('imageInput').click()">📷 Upload Image</button>
-                        <input type="file" id="imageInput" accept="image/*" style="display: none" onchange="uploadImage(this)">
-                    </div>
-                    <button class="send-btn" onclick="sendMessage()">Send →</button>
+                <div class="input-area">
+                    <input type="text" id="messageInput" placeholder="Type a message..." onkeypress="handleKeyPress(event)">
+                    <button class="upload-btn" onclick="document.getElementById('imageInput').click()">📷 Image</button>
+                    <button onclick="sendMessage()">Send →</button>
+                    <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="uploadImage(this)">
                 </div>
             </div>
         </div>
     </div>
-
+    
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        let socket;
-        let currentUsername = '';
-
+        let socket, currentUsername, currentRoom = 'general', privateChatTarget = null;
+        
         function joinChat() {
             const username = document.getElementById('usernameInput').value.trim();
-            if (!username) {
-                alert('Please enter a username');
-                return;
-            }
-            if (username.length > 20) {
-                alert('Username must be less than 20 characters');
-                return;
-            }
-
+            if (!username) return alert('Enter username');
             currentUsername = username;
-            
             socket = io();
-            socket.emit('user-join', currentUsername);
-            
+            socket.emit('user-join', username);
+            setupSocketListeners();
             document.getElementById('loginContainer').style.display = 'none';
             document.getElementById('chatRoom').style.display = 'block';
-            document.getElementById('messageInput').focus();
-            
-            socket.on('message-history', (history) => {
-                displayMessageHistory(history);
-            });
-            
-            socket.on('message', (message) => {
-                displayMessage(message);
-            });
-            
-            socket.on('user-list', (users) => {
-                updateUserList(users);
-            });
-            
-            socket.on('user-typing', (data) => {
-                updateTypingIndicator(data);
-            });
         }
         
-        function displayMessageHistory(messages) {
-            const container = document.getElementById('messagesContainer');
-            container.innerHTML = '';
-            
-            if (messages.length === 0) {
-                container.innerHTML = '<div class="system-message">✨ No messages yet. Start the conversation! ✨</div>';
-            } else {
-                messages.forEach(message => {
-                    appendMessageToContainer(message);
-                });
-            }
-            container.scrollTop = container.scrollHeight;
+        function setupSocketListeners() {
+            socket.on('rooms-list', (rooms) => updateRoomsList(rooms));
+            socket.on('online-users', (users) => updateOnlineUsers(users));
+            socket.on('message-history', (messages) => displayMessages(messages));
+            socket.on('message', (msg) => addMessage(msg));
+            socket.on('private-message', (msg) => addPrivateMessage(msg));
+            socket.on('user-typing', (data) => showTyping(data));
+            socket.on('room-switched', (data) => {
+                currentRoom = data.roomId;
+                document.getElementById('currentRoomName').innerText = data.roomName;
+                privateChatTarget = null;
+            });
+            socket.on('new-room', (room) => addRoomToList(room));
+            socket.on('group-invite', (invite) => {
+                if (confirm(`${invite.inviter} invited you to join "${invite.groupName}". Accept?`)) {
+                    socket.emit('accept-invite', { groupId: invite.groupId });
+                }
+            });
+            socket.on('group-created', (group) => alert(`Group "${group.name}" created!`));
+            socket.on('error', (msg) => alert(msg));
         }
         
-        function appendMessageToContainer(message) {
-            const container = document.getElementById('messagesContainer');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message';
-            
-            if (message.isSystem) {
-                messageDiv.innerHTML = `
-                    <div class="system-message">${escapeHtml(message.text)}</div>
-                `;
-            } else if (message.isImage) {
-                messageDiv.innerHTML = `
-                    <div class="message-header">
-                        <span class="message-username">${escapeHtml(message.username)}</span>
-                        <span class="message-time">${escapeHtml(message.time)}</span>
-                    </div>
-                    <img src="${message.image}" class="message-image" onclick="window.open(this.src)" alt="Shared image">
-                `;
-            } else {
-                const isOwnMessage = message.username === currentUsername;
-                const usernameColor = isOwnMessage ? '#764ba2' : '#667eea';
-                const filteredBadge = message.wasFiltered ? '<span class="filtered-badge">🔞 Filtered</span>' : '';
-                
-                messageDiv.innerHTML = `
-                    <div class="message-header">
-                        <span class="message-username" style="color: ${usernameColor}">${escapeHtml(message.username)}</span>
-                        <span class="message-time">${escapeHtml(message.time)}</span>
-                        ${filteredBadge}
-                    </div>
-                    <div class="message-text">${escapeHtml(message.text)}</div>
-                `;
-            }
-            
-            container.appendChild(messageDiv);
-            container.scrollTop = container.scrollHeight;
+        function updateRoomsList(rooms) {
+            const container = document.getElementById('roomsList');
+            container.innerHTML = rooms.map(room => `
+                <div class="room-item ${room.id === currentRoom ? 'active' : ''}" onclick="switchRoom('${room.id}')">
+                    <span>${room.type === 'public' ? '#' : '👥'} ${room.name}</span>
+                    <span class="room-badge">${room.memberCount}</span>
+                </div>
+            `).join('');
         }
         
-        function displayMessage(message) {
-            appendMessageToContainer(message);
-            const container = document.getElementById('messagesContainer');
-            container.scrollTop = container.scrollHeight;
+        function addRoomToList(room) {
+            const container = document.getElementById('roomsList');
+            container.innerHTML += `
+                <div class="room-item" onclick="switchRoom('${room.id}')">
+                    <span>👥 ${room.name}</span>
+                    <span class="room-badge">1</span>
+                </div>
+            `;
+        }
+        
+        function updateOnlineUsers(users) {
+            const container = document.getElementById('onlineUsersList');
+            container.innerHTML = users.filter(u => u !== currentUsername).map(user => `
+                <div class="user-item" onclick="startPrivateChat('${user}')">
+                    <span>💬 ${user}</span>
+                    <span class="room-badge">PM</span>
+                </div>
+            `).join('');
+            if (users.length === 0) container.innerHTML = '<div style="padding:10px;text-align:center">No one online</div>';
+        }
+        
+        function switchRoom(roomId) {
+            if (roomId === currentRoom) return;
+            currentRoom = roomId;
+            privateChatTarget = null;
+            document.getElementById('currentRoomName').innerText = roomId === 'general' ? 'General Chat' : 
+                roomId === 'random' ? 'Random' : roomId === 'gaming' ? 'Gaming' : roomId;
+            socket.emit('switch-room', roomId);
+            document.getElementById('messagesContainer').innerHTML = '<div class="system-message">Loading messages...</div>';
+        }
+        
+        function startPrivateChat(username) {
+            if (username === currentUsername) return;
+            privateChatTarget = username;
+            currentRoom = null;
+            document.getElementById('currentRoomName').innerHTML = `💬 Private with ${username}`;
+            document.getElementById('roomTypeBadge').innerHTML = 'Private Chat';
+            document.getElementById('messagesContainer').innerHTML = '<div class="system-message">Loading private messages...</div>';
+            socket.emit('get-private-history', username);
+        }
+        
+        function createGroup() {
+            const name = document.getElementById('newGroupName').value.trim();
+            if (!name) return alert('Enter group name');
+            socket.emit('create-group', name);
+            document.getElementById('newGroupName').value = '';
         }
         
         function sendMessage() {
             const input = document.getElementById('messageInput');
             const text = input.value.trim();
-            
             if (!text) return;
             
-            socket.emit('send-message', { text: text });
+            if (privateChatTarget) {
+                socket.emit('send-private', { targetUsername: privateChatTarget, text: text });
+            } else {
+                socket.emit('send-message', { text: text });
+            }
             input.value = '';
-            socket.emit('typing', false);
+            socket.emit('typing', { isTyping: false });
         }
         
         function uploadImage(input) {
             if (input.files && input.files[0]) {
                 const file = input.files[0];
-                
-                // Check file size (max 5MB)
-                if (file.size > 5 * 1024 * 1024) {
-                    alert('Image too large! Max size is 5MB');
-                    input.value = '';
-                    return;
-                }
-                
-                // Check file type
-                if (!file.type.startsWith('image/')) {
-                    alert('Please upload an image file');
-                    input.value = '';
-                    return;
-                }
-                
+                if (file.size > 5 * 1024 * 1024) return alert('Max 5MB');
                 const reader = new FileReader();
-                reader.onload = function(e) {
-                    socket.emit('send-image', { image: e.target.result });
+                reader.onload = (e) => {
+                    const imageData = { image: e.target.result };
+                    if (privateChatTarget) {
+                        imageData.isPrivate = true;
+                        imageData.targetUsername = privateChatTarget;
+                    }
+                    socket.emit('send-image', imageData);
                 };
                 reader.readAsDataURL(file);
                 input.value = '';
             }
         }
         
-        function handleKeyPress(event) {
-            if (event.key === 'Enter') {
-                sendMessage();
-            } else {
-                socket.emit('typing', true);
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') sendMessage();
+            else {
+                socket.emit('typing', { isTyping: true, targetUsername: privateChatTarget, isPrivate: !!privateChatTarget });
                 clearTimeout(window.typingTimeout);
                 window.typingTimeout = setTimeout(() => {
-                    socket.emit('typing', false);
+                    socket.emit('typing', { isTyping: false });
                 }, 1000);
             }
         }
         
-        function updateUserList(users) {
-            const container = document.getElementById('usersList');
-            if (users.length === 0) {
-                container.innerHTML = '<div class="user-item">No one online</div>';
+        function displayMessages(messages) {
+            const container = document.getElementById('messagesContainer');
+            container.innerHTML = '';
+            if (!messages || messages.length === 0) {
+                container.innerHTML = '<div class="system-message">✨ No messages yet ✨</div>';
                 return;
             }
-            
-            container.innerHTML = users.map(user => `
-                <div class="user-item">${escapeHtml(user)}</div>
-            `).join('');
+            messages.forEach(msg => addMessageToContainer(msg));
+            container.scrollTop = container.scrollHeight;
         }
         
-        function updateTypingIndicator(data) {
+        function addMessage(msg) {
+            addMessageToContainer(msg);
+            const container = document.getElementById('messagesContainer');
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        function addPrivateMessage(msg) {
+            if (privateChatTarget === msg.username || privateChatTarget === msg.targetUsername) {
+                addMessageToContainer(msg);
+                const container = document.getElementById('messagesContainer');
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+        
+        function addMessageToContainer(msg) {
+            const container = document.getElementById('messagesContainer');
+            const div = document.createElement('div');
+            div.className = 'message';
+            
+            if (msg.isSystem) {
+                div.innerHTML = `<div class="system-message">${escapeHtml(msg.text)}</div>`;
+            } else if (msg.isImage) {
+                div.innerHTML = `
+                    <div class="message-header">
+                        <span class="message-username">${escapeHtml(msg.username)}</span>
+                        <span class="message-time">${escapeHtml(msg.time)}</span>
+                    </div>
+                    <img src="${msg.image}" class="message-image" onclick="window.open(this.src)">
+                `;
+            } else {
+                const filteredBadge = msg.wasFiltered ? '<span class="filtered-badge">🔞 Filtered</span>' : '';
+                const privateBadge = msg.isPrivate ? '<span class="private-badge">🔒 Private</span>' : '';
+                div.innerHTML = `
+                    <div class="message-header">
+                        <span class="message-username">${escapeHtml(msg.username)}</span>
+                        <span class="message-time">${escapeHtml(msg.time)}</span>
+                        ${filteredBadge}
+                        ${privateBadge}
+                    </div>
+                    <div class="message-text">${escapeHtml(msg.text)}</div>
+                `;
+            }
+            container.appendChild(div);
+        }
+        
+        function showTyping(data) {
             const indicator = document.getElementById('typingIndicator');
             if (data.isTyping && data.username !== currentUsername) {
                 indicator.textContent = `${escapeHtml(data.username)} is typing...`;
             } else {
                 indicator.textContent = '';
-            }
-        }
-        
-        function clearChatHistory() {
-            if (confirm('Are you sure you want to clear all chat history? This cannot be undone.')) {
-                fetch('/clear-history', { method: 'POST' })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            document.getElementById('messagesContainer').innerHTML = '<div class="system-message">✨ Chat history cleared! ✨</div>';
-                            alert('Chat history cleared successfully!');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error clearing history:', error);
-                        alert('Failed to clear chat history');
-                    });
             }
         }
         
