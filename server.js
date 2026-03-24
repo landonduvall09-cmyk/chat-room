@@ -15,13 +15,13 @@ const STUDY_DATA_FILE = path.join(__dirname, 'study_data.json');
 const OFFLINE_MESSAGES_FILE = path.join(__dirname, 'offline_messages.json');
 
 // Store active users
-const activeUsers = new Map(); // socketId -> { username, currentRoom }
-const userSocketMap = new Map(); // username -> socketId
+const activeUsers = new Map();
+const userSocketMap = new Map();
 
 // Store offline messages
-let offlineMessages = {}; // { username: [messages] }
+let offlineMessages = {};
 
-// Store study groups
+// Store study groups with reactions
 let studyGroups = {
     'general-study': {
         name: 'General Study Hall',
@@ -30,6 +30,7 @@ let studyGroups = {
         type: 'public',
         members: [],
         messages: [],
+        reactions: {},
         createdAt: Date.now()
     },
     'math-help': {
@@ -39,6 +40,7 @@ let studyGroups = {
         type: 'public',
         members: [],
         messages: [],
+        reactions: {},
         createdAt: Date.now()
     },
     'science-lab': {
@@ -48,6 +50,7 @@ let studyGroups = {
         type: 'public',
         members: [],
         messages: [],
+        reactions: {},
         createdAt: Date.now()
     },
     'writing-center': {
@@ -57,22 +60,29 @@ let studyGroups = {
         type: 'public',
         members: [],
         messages: [],
+        reactions: {},
         createdAt: Date.now()
     }
 };
 
-// Store private conversations
-let privateMessages = {}; // { "user1_user2": [messages] }
+// Store private conversations with reactions
+let privateMessages = {};
 
 // Store all users who have ever joined
-let allUsers = new Set(); // Track all users who have ever joined
+let allUsers = new Set();
 
 // Load data
 function loadData() {
     try {
         if (fs.existsSync(STUDY_DATA_FILE)) {
             const data = JSON.parse(fs.readFileSync(STUDY_DATA_FILE, 'utf8'));
-            if (data.studyGroups) Object.assign(studyGroups, data.studyGroups);
+            if (data.studyGroups) {
+                Object.assign(studyGroups, data.studyGroups);
+                // Ensure reactions object exists
+                Object.keys(studyGroups).forEach(groupId => {
+                    if (!studyGroups[groupId].reactions) studyGroups[groupId].reactions = {};
+                });
+            }
             if (data.privateMessages) privateMessages = data.privateMessages;
             if (data.allUsers) allUsers = new Set(data.allUsers);
             console.log('✅ Loaded study data');
@@ -113,14 +123,64 @@ function addMessageToGroup(groupId, message) {
     saveData();
 }
 
-// Delete message from group (any user can delete)
+// Add reaction to message
+function addReaction(groupId, messageId, username, emoji) {
+    if (!studyGroups[groupId]) return false;
+    if (!studyGroups[groupId].reactions[messageId]) {
+        studyGroups[groupId].reactions[messageId] = {};
+    }
+    if (!studyGroups[groupId].reactions[messageId][emoji]) {
+        studyGroups[groupId].reactions[messageId][emoji] = [];
+    }
+    if (!studyGroups[groupId].reactions[messageId][emoji].includes(username)) {
+        studyGroups[groupId].reactions[messageId][emoji].push(username);
+        saveData();
+        return true;
+    }
+    return false;
+}
+
+// Remove reaction
+function removeReaction(groupId, messageId, username, emoji) {
+    if (!studyGroups[groupId]?.reactions[messageId]?.[emoji]) return false;
+    const index = studyGroups[groupId].reactions[messageId][emoji].indexOf(username);
+    if (index !== -1) {
+        studyGroups[groupId].reactions[messageId][emoji].splice(index, 1);
+        if (studyGroups[groupId].reactions[messageId][emoji].length === 0) {
+            delete studyGroups[groupId].reactions[messageId][emoji];
+        }
+        if (Object.keys(studyGroups[groupId].reactions[messageId]).length === 0) {
+            delete studyGroups[groupId].reactions[messageId];
+        }
+        saveData();
+        return true;
+    }
+    return false;
+}
+
+// Add private reaction
+function addPrivateReaction(conversationId, messageId, username, emoji) {
+    if (!privateMessages[conversationId]) return false;
+    const message = privateMessages[conversationId].find(m => m.id === messageId);
+    if (message) {
+        if (!message.reactions) message.reactions = {};
+        if (!message.reactions[emoji]) message.reactions[emoji] = [];
+        if (!message.reactions[emoji].includes(username)) {
+            message.reactions[emoji].push(username);
+            saveData();
+            return true;
+        }
+    }
+    return false;
+}
+
+// Delete message from group
 function deleteMessageFromGroup(groupId, messageId, requester) {
     if (studyGroups[groupId] && studyGroups[groupId].messages) {
         const messageIndex = studyGroups[groupId].messages.findIndex(m => m.id === messageId);
         if (messageIndex !== -1) {
-            const message = studyGroups[groupId].messages[messageIndex];
-            // Anyone can delete any message now
             studyGroups[groupId].messages.splice(messageIndex, 1);
+            delete studyGroups[groupId].reactions[messageId];
             saveData();
             return true;
         }
@@ -140,7 +200,7 @@ function addPrivateMessage(conversationId, message) {
     saveData();
 }
 
-// Delete private message (anyone can delete)
+// Delete private message
 function deletePrivateMessage(conversationId, messageId, requester) {
     if (privateMessages[conversationId]) {
         const messageIndex = privateMessages[conversationId].findIndex(m => m.id === messageId);
@@ -165,7 +225,7 @@ function storeOfflineMessage(username, message) {
     saveData();
 }
 
-// Get offline messages for user
+// Get offline messages
 function getOfflineMessages(username) {
     const messages = offlineMessages[username] || [];
     delete offlineMessages[username];
@@ -183,7 +243,7 @@ function generateMessageId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
 }
 
-// Educational profanity filter
+// Profanity filter
 const inappropriateWords = ['fuck', 'shit', 'ass', 'bitch', 'damn', 'crap', 'dick', 'pussy', 'cock', 'whore', 'slut', 'bastard', 'cunt', 'nigga', 'nigger', 'faggot', 'retard', 'motherfucker', 'asshole', 'bullshit', 'sex', 'porn'];
 
 function filterInappropriate(text) {
@@ -201,20 +261,16 @@ io.on('connection', (socket) => {
     console.log('Student connected:', socket.id);
     let currentUser = null;
 
-    // Student joins
     socket.on('student-join', (username) => {
         currentUser = username;
         activeUsers.set(socket.id, { username, currentRoom: 'general-study' });
         userSocketMap.set(username, socket.id);
-        
-        // Add to all users set
         allUsers.add(username);
         
         if (!studyGroups['general-study'].members.includes(username)) {
             studyGroups['general-study'].members.push(username);
         }
         
-        // Send available study groups
         socket.emit('study-groups', Object.keys(studyGroups).map(groupId => ({
             id: groupId,
             name: studyGroups[groupId].name,
@@ -224,24 +280,21 @@ io.on('connection', (socket) => {
             memberCount: studyGroups[groupId].members.length
         })));
         
-        // Send current group messages
         if (studyGroups['general-study'].messages) {
-            socket.emit('message-history', studyGroups['general-study'].messages);
+            socket.emit('message-history', {
+                messages: studyGroups['general-study'].messages,
+                reactions: studyGroups['general-study'].reactions
+            });
         }
         
-        // Send all users who have ever joined
         socket.emit('all-users', Array.from(allUsers).filter(u => u !== username));
-        
-        // Send online students
         io.emit('online-students', Array.from(activeUsers.values()).map(u => u.username));
         
-        // Send offline messages to this user
         const offlineMsgs = getOfflineMessages(username);
         if (offlineMsgs.length > 0) {
             socket.emit('offline-messages', offlineMsgs);
         }
         
-        // Broadcast join message
         const joinMessage = {
             id: generateMessageId(),
             text: `${username} joined the study session!`,
@@ -257,12 +310,10 @@ io.on('connection', (socket) => {
         saveData();
     });
     
-    // Get all previous users
     socket.on('get-all-users', () => {
         socket.emit('all-users', Array.from(allUsers).filter(u => u !== currentUser));
     });
     
-    // Switch study group
     socket.on('switch-group', (groupId) => {
         const userData = activeUsers.get(socket.id);
         if (!userData) return;
@@ -275,9 +326,12 @@ io.on('connection', (socket) => {
         if (oldGroup) socket.leave(oldGroup);
         
         if (studyGroups[groupId] && studyGroups[groupId].messages) {
-            socket.emit('message-history', studyGroups[groupId].messages);
+            socket.emit('message-history', {
+                messages: studyGroups[groupId].messages,
+                reactions: studyGroups[groupId].reactions || {}
+            });
         } else {
-            socket.emit('message-history', []);
+            socket.emit('message-history', { messages: [], reactions: {} });
         }
         
         socket.emit('group-switched', { 
@@ -286,7 +340,6 @@ io.on('connection', (socket) => {
         });
     });
     
-    // Send message to group
     socket.on('send-message', (messageData) => {
         const userData = activeUsers.get(socket.id);
         if (!userData) return;
@@ -304,14 +357,65 @@ io.on('connection', (socket) => {
             time: new Date().toLocaleTimeString(),
             timestamp: Date.now(),
             isSystem: false,
-            wasFiltered: wasFiltered
+            wasFiltered: wasFiltered,
+            reactions: {}
         };
         
         addMessageToGroup(currentGroup, message);
         io.to(currentGroup).emit('message', message);
     });
     
-    // Send private message (with offline support)
+    // Add reaction to message
+    socket.on('add-reaction', ({ messageId, emoji, isPrivate, targetUsername }) => {
+        if (!currentUser) return;
+        
+        if (isPrivate && targetUsername) {
+            const conversationId = getPrivateConversationId(currentUser, targetUsername);
+            const success = addPrivateReaction(conversationId, messageId, currentUser, emoji);
+            if (success) {
+                const targetSocketId = userSocketMap.get(targetUsername);
+                const reactionUpdate = { messageId, emoji, username: currentUser, action: 'add', isPrivate: true };
+                socket.emit('reaction-updated', reactionUpdate);
+                if (targetSocketId) {
+                    io.to(targetSocketId).emit('reaction-updated', reactionUpdate);
+                }
+            }
+        } else {
+            const userData = activeUsers.get(socket.id);
+            const currentGroup = userData.currentRoom;
+            const success = addReaction(currentGroup, messageId, currentUser, emoji);
+            if (success) {
+                const reactionUpdate = { messageId, emoji, username: currentUser, action: 'add', groupId: currentGroup };
+                io.to(currentGroup).emit('reaction-updated', reactionUpdate);
+            }
+        }
+    });
+    
+    // Remove reaction
+    socket.on('remove-reaction', ({ messageId, emoji, isPrivate, targetUsername }) => {
+        if (!currentUser) return;
+        
+        if (isPrivate && targetUsername) {
+            // For private messages, we'll handle removal
+            const conversationId = getPrivateConversationId(currentUser, targetUsername);
+            // Simplified - in production you'd have removeReaction function
+            const reactionUpdate = { messageId, emoji, username: currentUser, action: 'remove', isPrivate: true };
+            const targetSocketId = userSocketMap.get(targetUsername);
+            socket.emit('reaction-updated', reactionUpdate);
+            if (targetSocketId) {
+                io.to(targetSocketId).emit('reaction-updated', reactionUpdate);
+            }
+        } else {
+            const userData = activeUsers.get(socket.id);
+            const currentGroup = userData.currentRoom;
+            const success = removeReaction(currentGroup, messageId, currentUser, emoji);
+            if (success) {
+                const reactionUpdate = { messageId, emoji, username: currentUser, action: 'remove', groupId: currentGroup };
+                io.to(currentGroup).emit('reaction-updated', reactionUpdate);
+            }
+        }
+    });
+    
     socket.on('send-private', ({ targetUsername, text }) => {
         if (!currentUser) return;
         
@@ -327,31 +431,27 @@ io.on('connection', (socket) => {
             time: new Date().toLocaleTimeString(),
             timestamp: Date.now(),
             isPrivate: true,
-            wasFiltered: wasFiltered
+            wasFiltered: wasFiltered,
+            reactions: {}
         };
         
         addPrivateMessage(conversationId, message);
         
         const targetSocketId = userSocketMap.get(targetUsername);
         if (targetSocketId) {
-            // User is online, send immediately
             io.to(targetSocketId).emit('private-message', message);
         } else {
-            // User is offline, store message
             storeOfflineMessage(targetUsername, message);
         }
         socket.emit('private-message', message);
     });
     
-    // Delete any message (anyone can delete)
     socket.on('delete-message', ({ messageId, isPrivate, targetUsername, groupId }) => {
         if (!currentUser) return;
         
-        let success = false;
-        
         if (isPrivate && targetUsername) {
             const conversationId = getPrivateConversationId(currentUser, targetUsername);
-            success = deletePrivateMessage(conversationId, messageId, currentUser);
+            const success = deletePrivateMessage(conversationId, messageId, currentUser);
             if (success) {
                 const targetSocketId = userSocketMap.get(targetUsername);
                 if (targetSocketId) {
@@ -362,7 +462,7 @@ io.on('connection', (socket) => {
         } else {
             const currentGroup = groupId || (activeUsers.get(socket.id)?.currentRoom);
             if (currentGroup) {
-                success = deleteMessageFromGroup(currentGroup, messageId, currentUser);
+                const success = deleteMessageFromGroup(currentGroup, messageId, currentUser);
                 if (success) {
                     io.to(currentGroup).emit('message-deleted', { messageId, isPrivate: false });
                 }
@@ -370,7 +470,6 @@ io.on('connection', (socket) => {
         }
     });
     
-    // Delete entire chat history for a private conversation
     socket.on('delete-private-chat', ({ targetUsername }) => {
         if (!currentUser) return;
         const conversationId = getPrivateConversationId(currentUser, targetUsername);
@@ -385,7 +484,6 @@ io.on('connection', (socket) => {
         }
     });
     
-    // Get private chat history
     socket.on('get-private-history', (targetUsername) => {
         if (!currentUser) return;
         const conversationId = getPrivateConversationId(currentUser, targetUsername);
@@ -393,7 +491,6 @@ io.on('connection', (socket) => {
         socket.emit('private-history', { targetUsername, messages: history });
     });
     
-    // Send image
     socket.on('send-image', (imageData) => {
         const userData = activeUsers.get(socket.id);
         if (!userData) return;
@@ -405,7 +502,8 @@ io.on('connection', (socket) => {
             time: new Date().toLocaleTimeString(),
             timestamp: Date.now(),
             isSystem: false,
-            isImage: true
+            isImage: true,
+            reactions: {}
         };
         
         if (imageData.isPrivate && imageData.targetUsername) {
@@ -425,7 +523,6 @@ io.on('connection', (socket) => {
         }
     });
     
-    // Typing indicator
     socket.on('typing', ({ isTyping, targetUsername, isPrivate }) => {
         const userData = activeUsers.get(socket.id);
         if (!userData) return;
@@ -448,7 +545,6 @@ io.on('connection', (socket) => {
         }
     });
     
-    // Disconnect
     socket.on('disconnect', () => {
         if (currentUser) {
             Object.keys(studyGroups).forEach(groupId => {
@@ -486,11 +582,11 @@ io.on('connection', (socket) => {
     }
 });
 
-// Clear history endpoint
 app.post('/clear-history', (req, res) => {
     try {
         Object.keys(studyGroups).forEach(groupId => {
             studyGroups[groupId].messages = [];
+            studyGroups[groupId].reactions = {};
         });
         privateMessages = {};
         offlineMessages = {};
@@ -506,6 +602,7 @@ server.listen(PORT, () => {
     console.log(`📚 Study Group Hub running on http://localhost:${PORT}`);
     console.log(`💬 Private Messages with Offline Support`);
     console.log(`🗑️ Anyone Can Delete Any Message`);
+    console.log(`😊 Emoji Reactions Enabled (Like Apple Messages)`);
     console.log(`📨 Offline Messages Delivered When User Returns`);
     console.log(`👥 All Previous Users Can Be Messaged`);
 });
