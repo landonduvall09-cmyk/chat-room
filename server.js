@@ -11,46 +11,63 @@ const io = socketIo(server);
 app.use(express.static(__dirname));
 
 // Data storage files
-const MESSAGES_FILE = path.join(__dirname, 'chat_data.json');
-const USERS_FILE = path.join(__dirname, 'users.json');
+const STUDY_DATA_FILE = path.join(__dirname, 'study_data.json');
 
-// Store active users and their socket IDs
+// Store active users
 const activeUsers = new Map(); // socketId -> { username, currentRoom }
 const userSocketMap = new Map(); // username -> socketId
 
-// Store rooms and their members
-const rooms = {
-    'general': {
-        name: 'General Chat',
+// Store study groups
+let studyGroups = {
+    'general-study': {
+        name: 'General Study Hall',
+        subject: 'All Subjects',
+        description: 'Collaborate on any subject',
         type: 'public',
         members: [],
+        messages: [],
         createdAt: Date.now()
     },
-    'random': {
-        name: 'Random',
+    'math-help': {
+        name: 'Math Help Center',
+        subject: 'Mathematics',
+        description: 'Algebra, Calculus, Geometry help',
         type: 'public',
         members: [],
+        messages: [],
         createdAt: Date.now()
     },
-    'gaming': {
-        name: 'Gaming',
+    'science-lab': {
+        name: 'Science Lab',
+        subject: 'Sciences',
+        description: 'Biology, Chemistry, Physics',
         type: 'public',
         members: [],
+        messages: [],
+        createdAt: Date.now()
+    },
+    'writing-center': {
+        name: 'Writing Center',
+        subject: 'English & Writing',
+        description: 'Essays, papers, creative writing',
+        type: 'public',
+        members: [],
+        messages: [],
         createdAt: Date.now()
     }
 };
 
 // Store private conversations
-let privateConversations = {}; // { "user1_user2": [messages] }
+let privateMessages = {}; // { "user1_user2": [messages] }
 
-// Load data from files
+// Load data
 function loadData() {
     try {
-        if (fs.existsSync(MESSAGES_FILE)) {
-            const data = JSON.parse(fs.readFileSync(MESSAGES_FILE, 'utf8'));
-            if (data.rooms) Object.assign(rooms, data.rooms);
-            if (data.privateConversations) privateConversations = data.privateConversations;
-            console.log('✅ Loaded chat data');
+        if (fs.existsSync(STUDY_DATA_FILE)) {
+            const data = JSON.parse(fs.readFileSync(STUDY_DATA_FILE, 'utf8'));
+            if (data.studyGroups) Object.assign(studyGroups, data.studyGroups);
+            if (data.privateMessages) privateMessages = data.privateMessages;
+            console.log('✅ Loaded study data');
         }
     } catch (error) {
         console.error('Error loading data:', error);
@@ -60,53 +77,82 @@ function loadData() {
 function saveData() {
     try {
         const data = {
-            rooms: rooms,
-            privateConversations: privateConversations
+            studyGroups: studyGroups,
+            privateMessages: privateMessages
         };
-        fs.writeFileSync(MESSAGES_FILE, JSON.stringify(data, null, 2));
+        fs.writeFileSync(STUDY_DATA_FILE, JSON.stringify(data, null, 2));
     } catch (error) {
         console.error('Error saving data:', error);
     }
 }
 
-// Add message to room history
-function addMessageToRoom(roomId, message) {
-    if (!rooms[roomId]) return;
-    if (!rooms[roomId].messages) rooms[roomId].messages = [];
-    rooms[roomId].messages.push(message);
-    // Keep last 200 messages per room
-    if (rooms[roomId].messages.length > 200) {
-        rooms[roomId].messages = rooms[roomId].messages.slice(-200);
+// Add message to group
+function addMessageToGroup(groupId, message) {
+    if (!studyGroups[groupId]) return;
+    if (!studyGroups[groupId].messages) studyGroups[groupId].messages = [];
+    studyGroups[groupId].messages.push(message);
+    if (studyGroups[groupId].messages.length > 500) {
+        studyGroups[groupId].messages = studyGroups[groupId].messages.slice(-500);
     }
     saveData();
+}
+
+// Delete message from group
+function deleteMessageFromGroup(groupId, messageId) {
+    if (studyGroups[groupId] && studyGroups[groupId].messages) {
+        const index = studyGroups[groupId].messages.findIndex(m => m.id === messageId);
+        if (index !== -1) {
+            studyGroups[groupId].messages.splice(index, 1);
+            saveData();
+            return true;
+        }
+    }
+    return false;
 }
 
 // Add private message
 function addPrivateMessage(conversationId, message) {
-    if (!privateConversations[conversationId]) {
-        privateConversations[conversationId] = [];
+    if (!privateMessages[conversationId]) {
+        privateMessages[conversationId] = [];
     }
-    privateConversations[conversationId].push(message);
-    // Keep last 500 messages per private chat
-    if (privateConversations[conversationId].length > 500) {
-        privateConversations[conversationId] = privateConversations[conversationId].slice(-500);
+    privateMessages[conversationId].push(message);
+    if (privateMessages[conversationId].length > 500) {
+        privateMessages[conversationId] = privateMessages[conversationId].slice(-500);
     }
     saveData();
 }
 
-// Get or create private conversation ID
+// Delete private message
+function deletePrivateMessage(conversationId, messageId) {
+    if (privateMessages[conversationId]) {
+        const index = privateMessages[conversationId].findIndex(m => m.id === messageId);
+        if (index !== -1) {
+            privateMessages[conversationId].splice(index, 1);
+            saveData();
+            return true;
+        }
+    }
+    return false;
+}
+
+// Get private conversation ID
 function getPrivateConversationId(user1, user2) {
     return [user1, user2].sort().join('_');
 }
 
-// Profanity filter
-const badWords = ['fuck', 'shit', 'ass', 'bitch', 'damn', 'crap', 'dick', 'pussy', 'cock', 'whore', 'slut', 'bastard', 'cunt', 'nigga', 'nigger', 'faggot', 'retard', 'motherfucker', 'asshole', 'bullshit'];
+// Generate unique message ID
+function generateMessageId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+}
 
-function filterProfanity(text) {
+// Educational profanity filter (blocks inappropriate content)
+const inappropriateWords = ['fuck', 'shit', 'ass', 'bitch', 'damn', 'crap', 'dick', 'pussy', 'cock', 'whore', 'slut', 'bastard', 'cunt', 'nigga', 'nigger', 'faggot', 'retard', 'motherfucker', 'asshole', 'bullshit', 'sex', 'porn'];
+
+function filterInappropriate(text) {
     let filteredText = text;
-    const regex = new RegExp(`\\b(${badWords.join('|')})\\b`, 'gi');
+    const regex = new RegExp(`\\b(${inappropriateWords.join('|')})\\b`, 'gi');
     filteredText = filteredText.replace(regex, (match) => {
-        return '*'.repeat(match.length);
+        return '[content removed]';
     });
     return filteredText;
 }
@@ -114,163 +160,100 @@ function filterProfanity(text) {
 loadData();
 
 io.on('connection', (socket) => {
-    console.log('New user connected:', socket.id);
+    console.log('Student connected:', socket.id);
     let currentUser = null;
 
-    // User joins with username
-    socket.on('user-join', (username) => {
+    // Student joins
+    socket.on('student-join', (username) => {
         currentUser = username;
-        activeUsers.set(socket.id, { username, currentRoom: 'general' });
+        activeUsers.set(socket.id, { username, currentRoom: 'general-study' });
         userSocketMap.set(username, socket.id);
         
-        // Add user to general room by default
-        if (!rooms['general'].members.includes(username)) {
-            rooms['general'].members.push(username);
+        if (!studyGroups['general-study'].members.includes(username)) {
+            studyGroups['general-study'].members.push(username);
         }
         
-        // Send available rooms
-        socket.emit('rooms-list', Object.keys(rooms).map(roomId => ({
-            id: roomId,
-            name: rooms[roomId].name,
-            type: rooms[roomId].type,
-            memberCount: rooms[roomId].members.length
+        // Send available study groups
+        socket.emit('study-groups', Object.keys(studyGroups).map(groupId => ({
+            id: groupId,
+            name: studyGroups[groupId].name,
+            subject: studyGroups[groupId].subject,
+            description: studyGroups[groupId].description,
+            type: studyGroups[groupId].type,
+            memberCount: studyGroups[groupId].members.length
         })));
         
-        // Send current room messages
-        if (rooms['general'].messages) {
-            socket.emit('message-history', rooms['general'].messages);
+        // Send current group messages
+        if (studyGroups['general-study'].messages) {
+            socket.emit('message-history', studyGroups['general-study'].messages);
         }
         
-        // Send online users
-        io.emit('online-users', Array.from(activeUsers.values()).map(u => u.username));
+        // Send online students
+        io.emit('online-students', Array.from(activeUsers.values()).map(u => u.username));
         
         // Broadcast join message
         const joinMessage = {
-            text: `${username} joined the chat!`,
+            id: generateMessageId(),
+            text: `${username} joined the study session!`,
             username: 'System',
             time: new Date().toLocaleTimeString(),
             timestamp: Date.now(),
             isSystem: true
         };
-        addMessageToRoom('general', joinMessage);
-        io.to('general').emit('message', joinMessage);
+        addMessageToGroup('general-study', joinMessage);
+        io.to('general-study').emit('message', joinMessage);
         
-        // Update room member lists
-        updateRoomMemberLists();
+        updateGroupMemberLists();
     });
     
-    // Switch room
-    socket.on('switch-room', (roomId) => {
+    // Switch study group
+    socket.on('switch-group', (groupId) => {
         const userData = activeUsers.get(socket.id);
         if (!userData) return;
         
-        const oldRoom = userData.currentRoom;
-        userData.currentRoom = roomId;
+        const oldGroup = userData.currentRoom;
+        userData.currentRoom = groupId;
         activeUsers.set(socket.id, userData);
         
-        // Join new room socket room
-        socket.join(roomId);
-        if (oldRoom) socket.leave(oldRoom);
+        socket.join(groupId);
+        if (oldGroup) socket.leave(oldGroup);
         
-        // Send room messages
-        if (rooms[roomId] && rooms[roomId].messages) {
-            socket.emit('message-history', rooms[roomId].messages);
+        if (studyGroups[groupId] && studyGroups[groupId].messages) {
+            socket.emit('message-history', studyGroups[groupId].messages);
         } else {
             socket.emit('message-history', []);
         }
         
-        // Notify about room switch
-        socket.emit('room-switched', { roomId, roomName: rooms[roomId].name });
+        socket.emit('group-switched', { 
+            groupId: groupId, 
+            groupName: studyGroups[groupId].name 
+        });
     });
     
-    // Create new group
-    socket.on('create-group', (groupName) => {
-        if (!currentUser) return;
-        
-        const groupId = groupName.toLowerCase().replace(/\s+/g, '-');
-        if (!rooms[groupId]) {
-            rooms[groupId] = {
-                name: groupName,
-                type: 'group',
-                creator: currentUser,
-                members: [currentUser],
-                messages: [],
-                createdAt: Date.now()
-            };
-            saveData();
-            
-            // Notify all users about new room
-            io.emit('new-room', {
-                id: groupId,
-                name: groupName,
-                type: 'group',
-                memberCount: 1
-            });
-            
-            socket.emit('group-created', { id: groupId, name: groupName });
-        } else {
-            socket.emit('error', 'Group already exists!');
-        }
-    });
-    
-    // Invite to group
-    socket.on('invite-to-group', ({ groupId, targetUsername }) => {
-        if (!rooms[groupId]) return;
-        
-        const targetSocketId = userSocketMap.get(targetUsername);
-        if (targetSocketId) {
-            io.to(targetSocketId).emit('group-invite', {
-                groupId: groupId,
-                groupName: rooms[groupId].name,
-                inviter: currentUser
-            });
-        }
-    });
-    
-    // Accept group invite
-    socket.on('accept-invite', ({ groupId }) => {
-        if (rooms[groupId] && !rooms[groupId].members.includes(currentUser)) {
-            rooms[groupId].members.push(currentUser);
-            saveData();
-            
-            socket.join(groupId);
-            
-            const joinMessage = {
-                text: `${currentUser} joined the group!`,
-                username: 'System',
-                time: new Date().toLocaleTimeString(),
-                timestamp: Date.now(),
-                isSystem: true
-            };
-            addMessageToRoom(groupId, joinMessage);
-            io.to(groupId).emit('message', joinMessage);
-            
-            updateRoomMemberLists();
-        }
-    });
-    
-    // Send public message to current room
+    // Send message to group
     socket.on('send-message', (messageData) => {
         const userData = activeUsers.get(socket.id);
         if (!userData) return;
         
         const username = userData.username;
-        const currentRoom = userData.currentRoom;
+        const currentGroup = userData.currentRoom;
         
-        let messageText = filterProfanity(messageData.text);
+        let messageText = filterInappropriate(messageData.text);
         const wasFiltered = messageText !== messageData.text;
         
         const message = {
+            id: generateMessageId(),
             text: messageText,
             username: username,
             time: new Date().toLocaleTimeString(),
             timestamp: Date.now(),
             isSystem: false,
-            wasFiltered: wasFiltered
+            wasFiltered: wasFiltered,
+            canDelete: true
         };
         
-        addMessageToRoom(currentRoom, message);
-        io.to(currentRoom).emit('message', message);
+        addMessageToGroup(currentGroup, message);
+        io.to(currentGroup).emit('message', message);
     });
     
     // Send private message
@@ -278,36 +261,58 @@ io.on('connection', (socket) => {
         if (!currentUser) return;
         
         const conversationId = getPrivateConversationId(currentUser, targetUsername);
-        let messageText = filterProfanity(text);
+        let messageText = filterInappropriate(text);
         const wasFiltered = messageText !== text;
         
         const message = {
+            id: generateMessageId(),
             text: messageText,
             username: currentUser,
             targetUsername: targetUsername,
             time: new Date().toLocaleTimeString(),
             timestamp: Date.now(),
             isPrivate: true,
-            wasFiltered: wasFiltered
+            wasFiltered: wasFiltered,
+            canDelete: true
         };
         
         addPrivateMessage(conversationId, message);
         
-        // Send to both users
-        const senderSocket = socket.id;
         const targetSocketId = userSocketMap.get(targetUsername);
-        
         if (targetSocketId) {
             io.to(targetSocketId).emit('private-message', message);
         }
         socket.emit('private-message', message);
     });
     
+    // Delete message
+    socket.on('delete-message', ({ messageId, isPrivate, targetUsername }) => {
+        if (!currentUser) return;
+        
+        let success = false;
+        
+        if (isPrivate && targetUsername) {
+            const conversationId = getPrivateConversationId(currentUser, targetUsername);
+            success = deletePrivateMessage(conversationId, messageId);
+            if (success) {
+                io.to(userSocketMap.get(targetUsername)).emit('message-deleted', { messageId, isPrivate: true });
+                socket.emit('message-deleted', { messageId, isPrivate: true });
+            }
+        } else {
+            const userData = activeUsers.get(socket.id);
+            const currentGroup = userData.currentRoom;
+            success = deleteMessageFromGroup(currentGroup, messageId);
+            if (success) {
+                io.to(currentGroup).emit('message-deleted', { messageId, isPrivate: false });
+            }
+        }
+    });
+    
     // Get private chat history
     socket.on('get-private-history', (targetUsername) => {
         if (!currentUser) return;
         const conversationId = getPrivateConversationId(currentUser, targetUsername);
-        const history = privateConversations[conversationId] || [];
+        const history = privateMessages[conversationId] || [];
         socket.emit('private-history', { targetUsername, messages: history });
     });
     
@@ -317,29 +322,28 @@ io.on('connection', (socket) => {
         if (!userData) return;
         
         const imageMessage = {
+            id: generateMessageId(),
             image: imageData.image,
             username: userData.username,
             time: new Date().toLocaleTimeString(),
             timestamp: Date.now(),
             isSystem: false,
-            isImage: true
+            isImage: true,
+            canDelete: true
         };
         
         if (imageData.isPrivate && imageData.targetUsername) {
-            // Private image
             const conversationId = getPrivateConversationId(userData.username, imageData.targetUsername);
             addPrivateMessage(conversationId, imageMessage);
-            
             const targetSocketId = userSocketMap.get(imageData.targetUsername);
             if (targetSocketId) {
                 io.to(targetSocketId).emit('private-message', imageMessage);
             }
             socket.emit('private-message', imageMessage);
         } else {
-            // Public image in current room
-            const currentRoom = userData.currentRoom;
-            addMessageToRoom(currentRoom, imageMessage);
-            io.to(currentRoom).emit('message', imageMessage);
+            const currentGroup = userData.currentRoom;
+            addMessageToGroup(currentGroup, imageMessage);
+            io.to(currentGroup).emit('message', imageMessage);
         }
     });
     
@@ -358,8 +362,8 @@ io.on('connection', (socket) => {
                 });
             }
         } else {
-            const currentRoom = userData.currentRoom;
-            socket.to(currentRoom).emit('user-typing', {
+            const currentGroup = userData.currentRoom;
+            socket.to(currentGroup).emit('user-typing', {
                 username: userData.username,
                 isTyping: isTyping
             });
@@ -369,49 +373,49 @@ io.on('connection', (socket) => {
     // Disconnect
     socket.on('disconnect', () => {
         if (currentUser) {
-            // Remove user from all rooms
-            Object.keys(rooms).forEach(roomId => {
-                const index = rooms[roomId].members.indexOf(currentUser);
-                if (index !== -1) rooms[roomId].members.splice(index, 1);
+            Object.keys(studyGroups).forEach(groupId => {
+                const index = studyGroups[groupId].members.indexOf(currentUser);
+                if (index !== -1) studyGroups[groupId].members.splice(index, 1);
             });
             
             activeUsers.delete(socket.id);
             userSocketMap.delete(currentUser);
             
             const leaveMessage = {
-                text: `${currentUser} left the chat`,
+                id: generateMessageId(),
+                text: `${currentUser} left the study session`,
                 username: 'System',
                 time: new Date().toLocaleTimeString(),
                 timestamp: Date.now(),
                 isSystem: true
             };
-            addMessageToRoom('general', leaveMessage);
-            io.to('general').emit('message', leaveMessage);
+            addMessageToGroup('general-study', leaveMessage);
+            io.to('general-study').emit('message', leaveMessage);
             
-            io.emit('online-users', Array.from(activeUsers.values()).map(u => u.username));
-            updateRoomMemberLists();
+            io.emit('online-students', Array.from(activeUsers.values()).map(u => u.username));
+            updateGroupMemberLists();
         }
-        console.log('User disconnected:', socket.id);
+        console.log('Student disconnected:', socket.id);
     });
     
-    function updateRoomMemberLists() {
-        const roomMembers = {};
-        Object.keys(rooms).forEach(roomId => {
-            roomMembers[roomId] = rooms[roomId].members;
+    function updateGroupMemberLists() {
+        const groupMembers = {};
+        Object.keys(studyGroups).forEach(groupId => {
+            groupMembers[groupId] = studyGroups[groupId].members;
         });
-        io.emit('room-members', roomMembers);
+        io.emit('group-members', groupMembers);
     }
 });
 
-// Clear history endpoint
+// Clear history endpoint (admin only)
 app.post('/clear-history', (req, res) => {
     try {
-        Object.keys(rooms).forEach(roomId => {
-            rooms[roomId].messages = [];
+        Object.keys(studyGroups).forEach(groupId => {
+            studyGroups[groupId].messages = [];
         });
-        privateConversations = {};
+        privateMessages = {};
         saveData();
-        res.json({ success: true });
+        res.json({ success: true, message: 'Study session history cleared' });
     } catch (error) {
         res.status(500).json({ success: false });
     }
@@ -419,8 +423,9 @@ app.post('/clear-history', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`🚀 Enhanced Chat Server running on http://localhost:${PORT}`);
-    console.log(`📝 Groups and Private Chats ENABLED`);
-    console.log(`🔞 Profanity Filter ACTIVE`);
-    console.log(`🖼️ Image Upload SUPPORTED`);
+    console.log(`📚 Study Group Hub running on http://localhost:${PORT}`);
+    console.log(`🎓 Educational Collaboration Platform`);
+    console.log(`💬 Private Messages Enabled`);
+    console.log(`🗑️ Message Deletion Available`);
+    console.log(`🔒 Content Moderated for Educational Use`);
 });
