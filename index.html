@@ -18,7 +18,6 @@
             overflow: hidden;
         }
 
-        /* Login Screen */
         .login-container {
             background: white;
             border-radius: 20px;
@@ -35,13 +34,6 @@
         .login-container h1 {
             color: #2a5298;
             margin-bottom: 10px;
-            font-size: 2em;
-        }
-
-        .login-container .subtitle {
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 0.9em;
         }
 
         .login-container input {
@@ -50,12 +42,6 @@
             margin: 10px 0;
             border: 2px solid #e0e0e0;
             border-radius: 10px;
-            font-size: 16px;
-        }
-
-        .login-container input:focus {
-            outline: none;
-            border-color: #2a5298;
         }
 
         .login-container button {
@@ -65,13 +51,10 @@
             color: white;
             border: none;
             border-radius: 10px;
-            font-size: 16px;
             font-weight: bold;
             cursor: pointer;
-            margin-top: 10px;
         }
 
-        /* Main App */
         .study-app {
             display: none;
             width: 100%;
@@ -83,7 +66,6 @@
             height: 100%;
         }
 
-        /* Sidebar */
         .sidebar {
             width: 320px;
             background: #1e293b;
@@ -91,27 +73,15 @@
             display: flex;
             flex-direction: column;
             overflow-y: auto;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
         }
 
         .sidebar-header {
-            padding: 25px 20px;
+            padding: 20px;
             background: #0f172a;
             border-bottom: 1px solid #334155;
         }
 
-        .sidebar-header h2 {
-            font-size: 1.4em;
-            margin-bottom: 5px;
-        }
-
-        .sidebar-header p {
-            font-size: 0.8em;
-            opacity: 0.7;
-        }
-
-        /* Study Groups Section */
-        .groups-section, .students-section {
+        .groups-section, .students-section, .previous-users-section {
             padding: 20px;
             border-bottom: 1px solid #334155;
         }
@@ -124,7 +94,7 @@
             margin-bottom: 12px;
         }
 
-        .group-item, .student-item {
+        .group-item, .student-item, .previous-user-item {
             padding: 12px;
             margin: 8px 0;
             background: #334155;
@@ -136,7 +106,7 @@
             align-items: center;
         }
 
-        .group-item:hover, .student-item:hover {
+        .group-item:hover, .student-item:hover, .previous-user-item:hover {
             background: #475569;
             transform: translateX(5px);
         }
@@ -160,22 +130,6 @@
             opacity: 0.7;
         }
 
-        .group-badge {
-            background: #0f172a;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 0.7em;
-        }
-
-        .student-status {
-            width: 8px;
-            height: 8px;
-            background: #4ade80;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-
-        /* Main Chat Area */
         .chat-area {
             flex: 1;
             display: flex;
@@ -190,23 +144,26 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
 
         .chat-header h3 {
             color: #1e293b;
-            font-size: 1.3em;
         }
 
-        .chat-badge {
-            background: #e2e8f0;
-            color: #475569;
-            padding: 5px 12px;
-            border-radius: 20px;
+        .delete-chat-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
             font-size: 0.8em;
         }
 
-        /* Messages Container */
+        .delete-chat-btn:hover {
+            background: #dc2626;
+        }
+
         .messages-container {
             flex: 1;
             overflow-y: auto;
@@ -245,7 +202,6 @@
         .message-text {
             color: #334155;
             word-wrap: break-word;
-            line-height: 1.5;
             background: white;
             padding: 10px 15px;
             border-radius: 12px;
@@ -258,8 +214,6 @@
             max-height: 300px;
             border-radius: 12px;
             cursor: pointer;
-            margin-top: 5px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
         .system-message {
@@ -267,40 +221,19 @@
             color: #94a3b8;
             font-style: italic;
             padding: 10px;
-            font-size: 0.85em;
-        }
-
-        .filtered-badge {
-            background: #f59e0b;
-            color: white;
-            font-size: 0.7em;
-            padding: 2px 8px;
-            border-radius: 12px;
-        }
-
-        .private-badge {
-            background: #10b981;
-            color: white;
-            font-size: 0.7em;
-            padding: 2px 8px;
-            border-radius: 12px;
         }
 
         .delete-btn {
             display: inline-block;
             margin-left: 10px;
-            color: #ef4444;
+            background: #ef4444;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
             cursor: pointer;
             font-size: 0.7em;
-            opacity: 0;
-            transition: opacity 0.2s;
         }
 
-        .message:hover .delete-btn {
-            opacity: 1;
-        }
-
-        /* Input Area */
         .input-area {
             background: white;
             padding: 20px 30px;
@@ -316,11 +249,6 @@
             border: 2px solid #e2e8f0;
             border-radius: 25px;
             outline: none;
-            font-size: 14px;
-        }
-
-        .input-area input:focus {
-            border-color: #2a5298;
         }
 
         button {
@@ -331,11 +259,6 @@
             border-radius: 25px;
             cursor: pointer;
             font-weight: 600;
-            transition: transform 0.2s;
-        }
-
-        button:hover {
-            transform: scale(1.02);
         }
 
         .upload-btn {
@@ -346,35 +269,32 @@
             padding: 5px 30px;
             color: #94a3b8;
             font-style: italic;
-            font-size: 0.8em;
         }
 
-        .back-btn {
-            background: #64748b;
-            padding: 8px 16px;
-            font-size: 0.85em;
+        .offline-badge {
+            background: #f59e0b;
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin-left: 8px;
         }
 
         @media (max-width: 768px) {
             .sidebar { width: 280px; }
-            .message-text { max-width: 85%; }
-            .message-image { max-width: 200px; }
         }
     </style>
 </head>
 <body>
-    <!-- Login Screen -->
     <div class="login-container" id="loginContainer">
         <h1>📚 Study Group Hub</h1>
-        <div class="subtitle">Collaborative Learning Platform</div>
-        <input type="text" id="usernameInput" placeholder="Enter your name (e.g., John D.)" maxlength="30">
+        <div class="subtitle">Connect with classmates anytime</div>
+        <input type="text" id="usernameInput" placeholder="Enter your name" maxlength="30">
         <button onclick="joinStudySession()">Join Study Session →</button>
         <div style="margin-top: 15px; font-size: 0.75em; color: #888;">
-            Connect with classmates, share resources, and study together
+            Messages go to offline users • Anyone can delete messages
         </div>
     </div>
 
-    <!-- Main Study App -->
     <div class="study-app" id="studyApp">
         <div class="app-container">
             <div class="sidebar">
@@ -383,25 +303,32 @@
                     <p>Collaborate with peers</p>
                 </div>
                 <div class="groups-section">
-                    <div class="section-title">📌 ACTIVE STUDY GROUPS</div>
+                    <div class="section-title">📌 ACTIVE GROUPS</div>
                     <div id="groupsList"></div>
                 </div>
                 <div class="students-section">
-                    <div class="section-title">👥 ONLINE STUDENTS</div>
+                    <div class="section-title">🟢 ONLINE NOW</div>
                     <div id="studentsList"></div>
+                </div>
+                <div class="previous-users-section">
+                    <div class="section-title">📨 PREVIOUS STUDENTS</div>
+                    <div id="previousUsersList"></div>
                 </div>
             </div>
             
             <div class="chat-area">
                 <div class="chat-header">
                     <h3 id="currentGroupName">General Study Hall</h3>
-                    <div class="chat-badge" id="chatTypeBadge">Public Group</div>
+                    <div>
+                        <button class="delete-chat-btn" id="deleteChatBtn" style="display:none;" onclick="deleteEntireChat()">🗑️ Delete Entire Chat</button>
+                        <span class="chat-badge" id="chatTypeBadge">Study Group</span>
+                    </div>
                 </div>
                 <div class="messages-container" id="messagesContainer"></div>
                 <div class="typing-indicator" id="typingIndicator"></div>
                 <div class="input-area">
-                    <input type="text" id="messageInput" placeholder="Ask a question or share resources..." onkeypress="handleKeyPress(event)">
-                    <button class="upload-btn" onclick="document.getElementById('imageInput').click()">📎 Share Resource</button>
+                    <input type="text" id="messageInput" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
+                    <button class="upload-btn" onclick="document.getElementById('imageInput').click()">📎 Share</button>
                     <button onclick="sendMessage()">Send →</button>
                     <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="uploadImage(this)">
                 </div>
@@ -416,7 +343,6 @@
         function joinStudySession() {
             const username = document.getElementById('usernameInput').value.trim();
             if (!username) return alert('Please enter your name');
-            if (username.length > 30) return alert('Name too long');
             
             currentUser = username;
             socket = io();
@@ -429,20 +355,34 @@
         function setupSocketListeners() {
             socket.on('study-groups', (groups) => updateGroupsList(groups));
             socket.on('online-students', (students) => updateStudentsList(students));
+            socket.on('all-users', (users) => updatePreviousUsersList(users));
             socket.on('message-history', (messages) => displayMessages(messages));
             socket.on('message', (msg) => addMessage(msg));
             socket.on('private-message', (msg) => addPrivateMessage(msg));
+            socket.on('offline-messages', (messages) => {
+                messages.forEach(msg => addMessage(msg));
+                alert(`You have ${messages.length} new messages from when you were offline!`);
+            });
             socket.on('message-deleted', (data) => removeMessage(data.messageId));
+            socket.on('chat-deleted', (data) => {
+                if (privateChatWith === data.targetUsername) {
+                    document.getElementById('messagesContainer').innerHTML = '<div class="system-message">✨ Chat history cleared ✨</div>';
+                }
+            });
             socket.on('user-typing', (data) => showTyping(data));
             socket.on('group-switched', (data) => {
                 currentGroup = data.groupId;
                 document.getElementById('currentGroupName').innerText = data.groupName;
                 privateChatWith = null;
                 document.getElementById('chatTypeBadge').innerHTML = 'Study Group';
+                document.getElementById('deleteChatBtn').style.display = 'none';
             });
             socket.on('private-history', (data) => {
                 displayMessages(data.messages);
             });
+            
+            // Get all previous users
+            socket.emit('get-all-users');
         }
         
         function updateGroupsList(groups) {
@@ -462,16 +402,32 @@
             const container = document.getElementById('studentsList');
             const filtered = students.filter(s => s !== currentUser);
             if (filtered.length === 0) {
-                container.innerHTML = '<div style="padding:10px;text-align:center;opacity:0.6">No other students online</div>';
+                container.innerHTML = '<div style="padding:10px;text-align:center;opacity:0.6">No one online</div>';
                 return;
             }
             container.innerHTML = filtered.map(student => `
                 <div class="student-item" onclick="startPrivateChat('${escapeHtml(student)}')">
                     <div style="display:flex;align-items:center;gap:8px;">
-                        <div class="student-status"></div>
+                        <div style="width:8px;height:8px;background:#4ade80;border-radius:50%;"></div>
                         <span>${escapeHtml(student)}</span>
                     </div>
                     <span style="font-size:0.7em;">💬 Message</span>
+                </div>
+            `).join('');
+        }
+        
+        function updatePreviousUsersList(users) {
+            const container = document.getElementById('previousUsersList');
+            if (users.length === 0) {
+                container.innerHTML = '<div style="padding:10px;text-align:center;opacity:0.6">No previous students</div>';
+                return;
+            }
+            container.innerHTML = users.map(user => `
+                <div class="previous-user-item" onclick="startPrivateChat('${escapeHtml(user)}')">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span>📬 ${escapeHtml(user)}</span>
+                    </div>
+                    <span style="font-size:0.7em;">Message</span>
                 </div>
             `).join('');
         }
@@ -481,6 +437,7 @@
             currentGroup = groupId;
             privateChatWith = null;
             document.getElementById('chatTypeBadge').innerHTML = 'Study Group';
+            document.getElementById('deleteChatBtn').style.display = 'none';
             socket.emit('switch-group', groupId);
             document.getElementById('messagesContainer').innerHTML = '<div class="system-message">Loading study group...</div>';
         }
@@ -490,9 +447,16 @@
             privateChatWith = username;
             currentGroup = null;
             document.getElementById('currentGroupName').innerHTML = `💬 Private: ${username}`;
-            document.getElementById('chatTypeBadge').innerHTML = 'Private Session';
-            document.getElementById('messagesContainer').innerHTML = '<div class="system-message">Loading private conversation...</div>';
+            document.getElementById('chatTypeBadge').innerHTML = 'Private Chat';
+            document.getElementById('deleteChatBtn').style.display = 'inline-block';
+            document.getElementById('messagesContainer').innerHTML = '<div class="system-message">Loading conversation...</div>';
             socket.emit('get-private-history', username);
+        }
+        
+        function deleteEntireChat() {
+            if (privateChatWith && confirm(`Delete entire chat history with ${privateChatWith}? This cannot be undone.`)) {
+                socket.emit('delete-private-chat', { targetUsername: privateChatWith });
+            }
         }
         
         function sendMessage() {
@@ -509,9 +473,9 @@
             socket.emit('typing', { isTyping: false });
         }
         
-        function deleteMessage(messageId, isPrivate, targetUsername) {
+        function deleteMessage(messageId, isPrivate, targetUsername, groupId) {
             if (confirm('Delete this message?')) {
-                socket.emit('delete-message', { messageId, isPrivate, targetUsername });
+                socket.emit('delete-message', { messageId, isPrivate, targetUsername, groupId });
             }
         }
         
@@ -528,7 +492,6 @@
             if (input.files && input.files[0]) {
                 const file = input.files[0];
                 if (file.size > 5 * 1024 * 1024) return alert('File too large (max 5MB)');
-                if (!file.type.startsWith('image/')) return alert('Please select an image file');
                 
                 const reader = new FileReader();
                 reader.onload = (e) => {
@@ -563,7 +526,7 @@
             const container = document.getElementById('messagesContainer');
             container.innerHTML = '';
             if (!messages || messages.length === 0) {
-                container.innerHTML = '<div class="system-message">✨ No messages yet. Start the conversation! ✨</div>';
+                container.innerHTML = '<div class="system-message">✨ No messages yet ✨</div>';
                 return;
             }
             messages.forEach(msg => addMessageToContainer(msg));
@@ -597,20 +560,16 @@
                     <div class="message-header">
                         <span class="message-username">${escapeHtml(msg.username)}</span>
                         <span class="message-time">${escapeHtml(msg.time)}</span>
-                        ${msg.username === currentUser ? `<span class="delete-btn" onclick="deleteMessage('${msg.id}', ${msg.isPrivate || false}, '${msg.targetUsername || ''}')">🗑️ Delete</span>` : ''}
+                        <span class="delete-btn" onclick="deleteMessage('${msg.id}', ${msg.isPrivate || false}, '${msg.targetUsername || ''}', '${currentGroup}')">🗑️ Delete</span>
                     </div>
                     <img src="${msg.image}" class="message-image" onclick="window.open(this.src)">
                 `;
             } else {
-                const filteredBadge = msg.wasFiltered ? '<span class="filtered-badge">⚠️ Moderated</span>' : '';
-                const privateBadge = msg.isPrivate ? '<span class="private-badge">🔒 Private</span>' : '';
                 div.innerHTML = `
                     <div class="message-header">
                         <span class="message-username">${escapeHtml(msg.username)}</span>
                         <span class="message-time">${escapeHtml(msg.time)}</span>
-                        ${filteredBadge}
-                        ${privateBadge}
-                        ${msg.username === currentUser ? `<span class="delete-btn" onclick="deleteMessage('${msg.id}', ${msg.isPrivate || false}, '${msg.targetUsername || ''}')">🗑️ Delete</span>` : ''}
+                        <span class="delete-btn" onclick="deleteMessage('${msg.id}', ${msg.isPrivate || false}, '${msg.targetUsername || ''}', '${currentGroup}')">🗑️ Delete</span>
                     </div>
                     <div class="message-text">${escapeHtml(msg.text)}</div>
                 `;
