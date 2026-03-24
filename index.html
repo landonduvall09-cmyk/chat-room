@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>💬 Friends Chat Room | Persistent Messages</title>
+    <title>💬 Friends Chat Room | With Image Upload & Profanity Filter</title>
     <style>
         * {
             margin: 0;
@@ -101,6 +101,15 @@
         .chat-header p {
             font-size: 0.9em;
             opacity: 0.9;
+        }
+
+        .chat-header .badge {
+            background: rgba(255,255,255,0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-top: 8px;
+            display: inline-block;
         }
 
         .chat-main {
@@ -204,6 +213,28 @@
             line-height: 1.4;
         }
 
+        .filtered-badge {
+            background: #ff9800;
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 8px;
+        }
+
+        .message-image {
+            max-width: 300px;
+            max-height: 300px;
+            border-radius: 10px;
+            margin-top: 5px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .message-image:hover {
+            transform: scale(1.05);
+        }
+
         .system-message {
             text-align: center;
             color: #999;
@@ -226,9 +257,10 @@
             background: white;
             border-top: 1px solid #e0e0e0;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
-        .message-input-area input {
+        .message-input-area input[type="text"] {
             flex: 1;
             padding: 12px;
             border: 2px solid #e0e0e0;
@@ -236,13 +268,36 @@
             font-size: 14px;
             outline: none;
             transition: border-color 0.3s;
+            min-width: 150px;
         }
 
-        .message-input-area input:focus {
+        .message-input-area input[type="text"]:focus {
             border-color: #667eea;
         }
 
-        .message-input-area button {
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .upload-btn {
+            padding: 12px 20px;
+            background: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+
+        .upload-btn:hover {
+            transform: scale(1.05);
+            background: #45a049;
+        }
+
+        .send-btn {
             padding: 12px 30px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -253,7 +308,7 @@
             transition: transform 0.2s;
         }
 
-        .message-input-area button:hover {
+        .send-btn:hover {
             transform: scale(1.05);
         }
 
@@ -278,8 +333,14 @@
                 width: 200px;
             }
             
-            .message-input-area button {
-                padding: 12px 20px;
+            .message-image {
+                max-width: 200px;
+                max-height: 200px;
+            }
+            
+            .upload-btn, .send-btn {
+                padding: 10px 15px;
+                font-size: 12px;
             }
         }
     </style>
@@ -297,7 +358,8 @@
     <div class="chat-room" id="chatRoom">
         <div class="chat-header">
             <h2>✨ Friends Chat Room ✨</h2>
-            <p>Messages are saved - they'll appear even after refresh!</p>
+            <p>Connect with friends across devices in real-time</p>
+            <div class="badge">🔞 Profanity Filter Active | 🖼️ Image Upload Enabled</div>
             <button class="clear-history-btn" onclick="clearChatHistory()">🗑️ Clear Chat History</button>
         </div>
         <div class="chat-main">
@@ -316,7 +378,11 @@
                 <div class="typing-indicator" id="typingIndicator"></div>
                 <div class="message-input-area">
                     <input type="text" id="messageInput" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
-                    <button onclick="sendMessage()">Send →</button>
+                    <div class="file-input-wrapper">
+                        <button class="upload-btn" onclick="document.getElementById('imageInput').click()">📷 Upload Image</button>
+                        <input type="file" id="imageInput" accept="image/*" style="display: none" onchange="uploadImage(this)">
+                    </div>
+                    <button class="send-btn" onclick="sendMessage()">Send →</button>
                 </div>
             </div>
         </div>
@@ -326,7 +392,6 @@
     <script>
         let socket;
         let currentUsername = '';
-        let messagesLoaded = false;
 
         function joinChat() {
             const username = document.getElementById('usernameInput').value.trim();
@@ -341,20 +406,13 @@
 
             currentUsername = username;
             
-            // Connect to socket server
             socket = io();
-            
-            // Send join event
             socket.emit('user-join', currentUsername);
             
-            // Show chat room
             document.getElementById('loginContainer').style.display = 'none';
             document.getElementById('chatRoom').style.display = 'block';
-            
-            // Focus on message input
             document.getElementById('messageInput').focus();
             
-            // Socket event listeners
             socket.on('message-history', (history) => {
                 displayMessageHistory(history);
             });
@@ -383,8 +441,6 @@
                     appendMessageToContainer(message);
                 });
             }
-            
-            // Scroll to bottom
             container.scrollTop = container.scrollHeight;
         }
         
@@ -397,26 +453,35 @@
                 messageDiv.innerHTML = `
                     <div class="system-message">${escapeHtml(message.text)}</div>
                 `;
+            } else if (message.isImage) {
+                messageDiv.innerHTML = `
+                    <div class="message-header">
+                        <span class="message-username">${escapeHtml(message.username)}</span>
+                        <span class="message-time">${escapeHtml(message.time)}</span>
+                    </div>
+                    <img src="${message.image}" class="message-image" onclick="window.open(this.src)" alt="Shared image">
+                `;
             } else {
                 const isOwnMessage = message.username === currentUsername;
                 const usernameColor = isOwnMessage ? '#764ba2' : '#667eea';
+                const filteredBadge = message.wasFiltered ? '<span class="filtered-badge">🔞 Filtered</span>' : '';
                 
                 messageDiv.innerHTML = `
                     <div class="message-header">
                         <span class="message-username" style="color: ${usernameColor}">${escapeHtml(message.username)}</span>
                         <span class="message-time">${escapeHtml(message.time)}</span>
+                        ${filteredBadge}
                     </div>
                     <div class="message-text">${escapeHtml(message.text)}</div>
                 `;
             }
             
             container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
         }
         
         function displayMessage(message) {
             appendMessageToContainer(message);
-            
-            // Scroll to bottom
             const container = document.getElementById('messagesContainer');
             container.scrollTop = container.scrollHeight;
         }
@@ -427,24 +492,43 @@
             
             if (!text) return;
             
-            // Send message to server
             socket.emit('send-message', { text: text });
-            
-            // Clear input
             input.value = '';
-            
-            // Stop typing indicator
             socket.emit('typing', false);
+        }
+        
+        function uploadImage(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                
+                // Check file size (max 5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('Image too large! Max size is 5MB');
+                    input.value = '';
+                    return;
+                }
+                
+                // Check file type
+                if (!file.type.startsWith('image/')) {
+                    alert('Please upload an image file');
+                    input.value = '';
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    socket.emit('send-image', { image: e.target.result });
+                };
+                reader.readAsDataURL(file);
+                input.value = '';
+            }
         }
         
         function handleKeyPress(event) {
             if (event.key === 'Enter') {
                 sendMessage();
             } else {
-                // User is typing
                 socket.emit('typing', true);
-                
-                // Clear typing after 1 second of no typing
                 clearTimeout(window.typingTimeout);
                 window.typingTimeout = setTimeout(() => {
                     socket.emit('typing', false);
@@ -479,7 +563,6 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            // Clear messages on screen
                             document.getElementById('messagesContainer').innerHTML = '<div class="system-message">✨ Chat history cleared! ✨</div>';
                             alert('Chat history cleared successfully!');
                         }

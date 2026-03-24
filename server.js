@@ -17,6 +17,23 @@ const MESSAGES_FILE = path.join(__dirname, 'chat_history.json');
 // Store active users
 const users = {};
 
+// Profanity filter - list of bad words
+const badWords = [
+    'fuck', 'shit', 'ass', 'bitch', 'damn', 'crap', 'dick', 'pussy',
+    'cock', 'whore', 'slut', 'bastard', 'cunt', 'nigga', 'nigger',
+    'faggot', 'retard', 'motherfucker', 'asshole', 'bullshit'
+];
+
+// Function to filter profanity
+function filterProfanity(text) {
+    let filteredText = text;
+    const regex = new RegExp(`\\b(${badWords.join('|')})\\b`, 'gi');
+    filteredText = filteredText.replace(regex, (match) => {
+        return '*'.repeat(match.length);
+    });
+    return filteredText;
+}
+
 // Load previous messages from file
 let messageHistory = [];
 
@@ -27,7 +44,6 @@ function loadMessageHistory() {
             messageHistory = JSON.parse(data);
             console.log(`Loaded ${messageHistory.length} messages from history`);
         } else {
-            // Create file with empty array
             messageHistory = [];
             saveMessageHistory();
             console.log('Created new chat history file');
@@ -49,7 +65,6 @@ function saveMessageHistory() {
 // Add message to history
 function addMessageToHistory(message) {
     messageHistory.push(message);
-    // Keep only last 500 messages to prevent file from growing too large
     if (messageHistory.length > 500) {
         messageHistory = messageHistory.slice(-500);
     }
@@ -80,23 +95,52 @@ io.on('connection', (socket) => {
         socket.broadcast.emit('message', joinMessage);
         addMessageToHistory(joinMessage);
         
-        // Send updated user list to everyone
         io.emit('user-list', Object.values(users));
     });
 
     // When a user sends a message
     socket.on('send-message', (messageData) => {
         const username = users[socket.id] || 'Anonymous';
+        
+        let messageText = messageData.text;
+        let wasFiltered = false;
+        
+        // Check if message contains profanity
+        const originalText = messageText;
+        messageText = filterProfanity(messageText);
+        
+        if (originalText !== messageText) {
+            wasFiltered = true;
+        }
+        
         const message = {
-            text: messageData.text,
+            text: messageText,
             username: username,
             time: new Date().toLocaleTimeString(),
             timestamp: Date.now(),
-            isSystem: false
+            isSystem: false,
+            wasFiltered: wasFiltered
         };
         
         io.emit('message', message);
         addMessageToHistory(message);
+    });
+    
+    // When a user sends an image
+    socket.on('send-image', (imageData) => {
+        const username = users[socket.id] || 'Anonymous';
+        
+        const imageMessage = {
+            image: imageData.image,
+            username: username,
+            time: new Date().toLocaleTimeString(),
+            timestamp: Date.now(),
+            isSystem: false,
+            isImage: true
+        };
+        
+        io.emit('message', imageMessage);
+        addMessageToHistory(imageMessage);
     });
 
     // When a user is typing
@@ -132,13 +176,6 @@ io.on('connection', (socket) => {
     });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`🚀 Chat server running on http://localhost:${PORT}`);
-    console.log(`📝 Messages are saved to ${MESSAGES_FILE}`);
-    console.log(`Share this URL with friends on the same network!`);
-});
-
 // Clear chat history endpoint
 app.post('/clear-history', (req, res) => {
     try {
@@ -150,4 +187,13 @@ app.post('/clear-history', (req, res) => {
         console.error('Error clearing history:', error);
         res.status(500).json({ success: false, error: 'Failed to clear history' });
     }
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`🚀 Chat server running on http://localhost:${PORT}`);
+    console.log(`📝 Messages are saved to ${MESSAGES_FILE}`);
+    console.log(`🔞 Profanity filter is ACTIVE`);
+    console.log(`🖼️ Image upload support ENABLED`);
+    console.log(`Share this URL with friends on the same network!`);
 });
